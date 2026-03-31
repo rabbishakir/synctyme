@@ -1,0 +1,377 @@
+// Copy this to prisma/schema.prisma at the start
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// PLATFORM LEVEL
+// ============================================
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  mfaSecret     String?
+  mfaEnabled    Boolean       @default(false)
+  platformRole  PlatformRole?
+  tenantMembers TenantMember[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  @@index([email])
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SYSTEM_ADMIN
+}
+
+model Company {
+  id              String             @id @default(cuid())
+  name            String
+  status          CompanyStatus      @default(ACTIVE)
+  tenantMembers   TenantMember[]
+  consultants     Consultant[]
+  projects        Project[]
+  settings        CompanySettings?
+  auditLogs       AuditLog[]
+  deletionRequest DeletionRequest?
+  customFields    CustomField[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  @@index([status])
+}
+
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_DELETION
+  ARCHIVED
+  DELETED
+}
+
+model CompanySettings {
+  id                    String         @id @default(cuid())
+  companyId             String         @unique
+  payPeriodStructure    PayPeriodType  @default(WEEKLY)
+  aiValidationThreshold Decimal        @default(0.85) @db.Decimal(3, 2)
+  lockingPolicy         LockingPolicy  @default(AUTO_LOCK_ON_APPROVAL)
+  retentionYears        Int            @default(7)
+  carryForwardEnabled   Boolean        @default(true)
+  holidayCalendar       Json?
+  reminderSchedule      Json?
+  company               Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+enum PayPeriodType {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum LockingPolicy {
+  AUTO_LOCK_ON_APPROVAL
+  MANUAL_LOCK
+}
+
+model TenantMember {
+  id        String      @id @default(cuid())
+  userId    String
+  companyId String
+  role      TenantRole
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+}
+
+enum TenantRole {
+  COMPANY_ADMIN
+  HR
+  ACCOUNTS
+  CONSULTANT
+}
+
+// ============================================
+// CONSULTANT
+// ============================================
+
+model Consultant {
+  id                        String              @id @default(cuid())
+  consultantCode            String              @unique
+  companyId                 String
+  userId                    String
+  name                      String
+  email                     String
+  phone                     String
+  payrollCompany            String
+  internalTimesheetRequired Boolean             @default(true)
+  status                    ConsultantStatus    @default(INACTIVE)
+  notes                     String?
+  employmentCycles          EmploymentCycle[]
+  projects                  Project[]
+  timesheets                Timesheet[]
+  company                   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  
+  @@index([companyId])
+  @@index([userId])
+  @@index([status])
+  @@index([consultantCode])
+}
+
+enum ConsultantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model EmploymentCycle {
+  id               String      @id @default(cuid())
+  consultantId     String
+  hireDate         DateTime
+  deactivationDate DateTime?
+  rehireReason     String?
+  closedAt         DateTime?
+  consultant       Consultant  @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime    @default(now())
+  
+  @@index([consultantId])
+  @@index([closedAt])
+}
+
+// ============================================
+// PROJECT
+// ============================================
+
+model Project {
+  id                              String          @id @default(cuid())
+  consultantId                    String
+  companyId                       String
+  clientName                      String
+  clientLocation                  String?
+  midClient                       String?
+  startDate                       DateTime
+  endDate                         DateTime?
+  workAuthDetails                 String?
+  recruiter                       String?
+  marketer                        String?
+  clientApprovedTimesheetRequired Boolean         @default(false)
+  status                          ProjectStatus   @default(ACTIVE)
+  rateHistory                     RateHistory[]
+  timesheets                      Timesheet[]
+  consultant                      Consultant      @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  company                         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime        @default(now())
+  updatedAt                       DateTime        @updatedAt
+  
+  @@index([consultantId])
+  @@index([companyId])
+  @@index([status])
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+}
+
+model RateHistory {
+  id            String   @id @default(cuid())
+  projectId     String
+  payRate       Decimal  @db.Decimal(10, 2)
+  incentiveRate Decimal? @db.Decimal(10, 2)
+  effectiveDate DateTime
+  createdBy     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  
+  @@index([projectId, effectiveDate])
+}
+
+// ============================================
+// TIMESHEET
+// ============================================
+
+model Timesheet {
+  id                   String            @id @default(cuid())
+  consultantId         String
+  projectId            String
+  companyId            String
+  weekStart            DateTime
+  status               TimesheetStatus   @default(DRAFT)
+  entries              TimesheetEntry[]
+  uploadedFileUrl      String?
+  uploadedFileName     String?
+  uploadedFileSize     Int?
+  uploadedFileMimeType String?
+  aiValidationResult   Json?
+  isCarryForward       Boolean           @default(false)
+  originalTimesheetId  String?
+  approvedBy           String?
+  approvedAt           DateTime?
+  lockedAt             DateTime?
+  rejectedBy           String?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+  reopenedBy           String?
+  reopenedAt           DateTime?
+  reopenReason         String?
+  consultant           Consultant        @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  project              Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  
+  @@unique([consultantId, projectId, weekStart])
+  @@index([consultantId, weekStart])
+  @@index([status])
+  @@index([companyId, status])
+  @@index([weekStart])
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  LOCKED
+}
+
+model TimesheetEntry {
+  id          String    @id @default(cuid())
+  timesheetId String
+  date        DateTime
+  hours       Decimal   @db.Decimal(4, 2)
+  notes       String?
+  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  
+  @@index([timesheetId])
+  @@index([date])
+}
+
+// ============================================
+// CUSTOM FIELDS
+// ============================================
+
+model CustomField {
+  id            String              @id @default(cuid())
+  companyId     String
+  entity        CustomFieldEntity
+  fieldName     String
+  fieldLabel    String
+  dataType      CustomFieldType
+  isRequired    Boolean             @default(false)
+  maxLength     Int?
+  defaultValue  String?
+  displayOrder  Int
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  values        CustomFieldValue[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  @@unique([companyId, entity, fieldName])
+  @@index([companyId, entity])
+}
+
+enum CustomFieldEntity {
+  CONSULTANT
+  PROJECT
+  TIMESHEET
+}
+
+enum CustomFieldType {
+  DATE
+  CURRENCY
+  TEXT
+}
+
+model CustomFieldValue {
+  id            String      @id @default(cuid())
+  customFieldId String
+  entityId      String
+  value         String
+  customField   CustomField @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@unique([customFieldId, entityId])
+  @@index([entityId])
+}
+
+// ============================================
+// COMPANY DELETION
+// ============================================
+
+model DeletionRequest {
+  id                    String          @id @default(cuid())
+  companyId             String          @unique
+  initiatedBy           String
+  initiatedAt           DateTime        @default(now())
+  approvedBy            String?
+  approvedAt            DateTime?
+  rejectedBy            String?
+  rejectedAt            DateTime?
+  reason                String
+  justification         String?
+  status                DeletionStatus  @default(PENDING)
+  scheduledHardDeleteAt DateTime?
+  company               Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([status])
+}
+
+enum DeletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+// ============================================
+// AUDIT LOGS
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String
+  role      String
+  entity    String
+  entityId  String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  action    String
+  ipAddress String?
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  company   Company? @relation(fields: [companyId], references: [id])
+  
+  @@index([companyId, timestamp])
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+model PlatformAuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  performedBy String
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  timestamp   DateTime @default(now())
+  
+  @@index([timestamp])
+  @@index([action])
+}
