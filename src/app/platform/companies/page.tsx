@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { CompanyStatus } from "@prisma/client";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 const STATUS_STYLES: Record<CompanyStatus, string> = {
   ACTIVE: "bg-green-100 text-green-700",
@@ -45,14 +46,19 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
             <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
             <p className="mt-1 text-sm text-gray-500">
               {companies.length} tenant{companies.length !== 1 ? "s" : ""} found
+              {" · "}
+              <span className="text-gray-400">{session.user.email}</span>
             </p>
           </div>
-          <Link
-            href="/platform/companies/new"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-          >
-            + Create Company
-          </Link>
+          <div className="flex items-center gap-3">
+            <LogoutButton />
+            <Link
+              href="/platform/companies/new"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
+            >
+              + Create Company
+            </Link>
+          </div>
         </div>
 
         {/* Status Filter */}
@@ -134,13 +140,25 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                     <td className="px-4 py-3 text-gray-500">
                       {new Date(company.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right space-x-3">
                       <Link
                         href={`/tenant/${company.id}/dashboard`}
                         className="text-blue-600 hover:underline"
                       >
                         View
                       </Link>
+                      {(session.user.platformRole === "SUPER_ADMIN" ||
+                        (session.user.platformRole === "SYSTEM_ADMIN" &&
+                          company.status === "PENDING_DELETION")) && (
+                        <Link
+                          href={`/platform/companies/${company.id}/delete`}
+                          className="text-amber-700 hover:underline"
+                        >
+                          {session.user.platformRole === "SYSTEM_ADMIN"
+                            ? "Review deletion"
+                            : "Delete"}
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

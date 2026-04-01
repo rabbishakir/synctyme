@@ -1,35 +1,28 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { prisma } from "@/lib/db";
+import { verifyUserPassword } from "@/lib/auth/credentials";
 import { verifyMFAToken } from "@/lib/auth/mfa";
-import type { PlatformRole } from "@prisma/client";
+import type { PlatformRole, TenantRole } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
       email: string;
+      emailVerified: Date | null;
       platformRole: PlatformRole | null;
       activeTenantId: string | null;
+      /** Tenant role for `activeTenantId`; null when not switched or platform-only. */
+      role: TenantRole | null;
     };
   }
   interface User {
-    id: string;
-    email: string;
-    platformRole: PlatformRole | null;
-    activeTenantId: string | null;
+    platformRole?: PlatformRole | null;
+    activeTenantId?: string | null;
+    role?: TenantRole | null;
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    email: string;
-    platformRole: PlatformRole | null;
-    activeTenantId: string | null;
-  }
-}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -45,17 +38,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const email = String(credentials.email).trim();
 
-        if (!user) return null;
-
-        const passwordMatch = await compare(
-          credentials.password as string,
-          user.passwordHash
+        const user = await verifyUserPassword(
+          email,
+          credentials.password as string
         );
-        if (!passwordMatch) return null;
+        if (!user) return null;
 
         if (user.mfaEnabled) {
           if (!credentials.mfaToken || !user.mfaSecret) return null;
@@ -71,27 +60,61 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           platformRole: user.platformRole,
           activeTenantId: null,
+          role: null,
         };
       },
     }),
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
+        token.sub = user.id;
         token.id = user.id;
         token.email = user.email as string;
         token.platformRole = user.platformRole;
-        token.activeTenantId = user.activeTenantId;
+        token.activeTenantId = user.activeTenantId ?? null;
+        token.tenantRole = user.role ?? null;
+      }
+      if (trigger === "update" && session) {
+        const s = session as {
+          user?: {
+            activeTenantId?: string | null;
+            role?: TenantRole | null;
+          };
+        };
+        if (s.user?.activeTenantId !== undefined) {
+          token.activeTenantId = s.user.activeTenantId;
+        }
+        if (s.user?.role !== undefined) {
+          token.tenantRole = s.user.role;
+        }
+      }
+      // Keep id and sub aligned after decode (Auth.js may only persist `sub`).
+      if (!token.id && token.sub) {
+        (token as { id?: string }).id = token.sub as string;
+      }
+      if (!token.sub && (token as { id?: string }).id) {
+        token.sub = (token as { id?: string }).id as string;
       }
       return token;
     },
     async session({ session, token }) {
+      const t = token as {
+        id?: string;
+        email?: string;
+        platformRole?: PlatformRole | null;
+        activeTenantId?: string | null;
+        tenantRole?: TenantRole | null;
+        sub?: string;
+      };
       session.user = {
-        id: token.id,
-        email: token.email,
-        platformRole: token.platformRole,
-        activeTenantId: token.activeTenantId,
+        id: t.id ?? t.sub ?? "",
+        email: t.email ?? "",
+        emailVerified: null,
+        platformRole: t.platformRole ?? null,
+        activeTenantId: t.activeTenantId ?? null,
+        role: t.tenantRole ?? null,
       };
       return session;
     },

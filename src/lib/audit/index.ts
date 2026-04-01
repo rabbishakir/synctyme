@@ -17,7 +17,7 @@ interface PlatformAuditLogParams {
   action: string;
   performedBy: string;
   targetId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, string | number | boolean | null>;
   ipAddress?: string;
 }
 

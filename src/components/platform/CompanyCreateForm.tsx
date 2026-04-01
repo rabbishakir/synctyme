@@ -39,11 +39,42 @@ export default function CompanyCreateForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "same-origin",
     });
 
-    const body = await res.json();
+    const raw = await res.text();
+    let body: {
+      error?: string;
+      tempPassword?: string;
+      adminEmail?: string;
+      company?: { name: string };
+    } = {};
+
+    if (raw.trim()) {
+      try {
+        body = JSON.parse(raw) as typeof body;
+      } catch {
+        setServerError(
+          `Unexpected response from server (${res.status}). Try again or check the server logs.`
+        );
+        return;
+      }
+    } else if (!res.ok) {
+      setServerError(`Request failed (${res.status}).`);
+      return;
+    }
+
     if (!res.ok) {
-      setServerError(body.error ?? "Failed to create company.");
+      setServerError(
+        typeof body.error === "string" ? body.error : "Failed to create company."
+      );
+      return;
+    }
+
+    if (!body.tempPassword || !body.adminEmail || !body.company?.name) {
+      setServerError(
+        "Company was created but the response was incomplete. Check the companies list."
+      );
       return;
     }
 
