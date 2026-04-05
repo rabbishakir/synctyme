@@ -61,6 +61,12 @@ export default async function TenantDashboard({ params }: TenantDashboardProps) 
               Projects
             </Link>
             <Link
+              href={`/tenant/${tenantId}/timesheets`}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Timesheets
+            </Link>
+            <Link
               href={`/tenant/${tenantId}/settings/users`}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
@@ -102,6 +108,15 @@ export default async function TenantDashboard({ params }: TenantDashboardProps) 
             <h2 className="text-lg font-semibold text-gray-800">Projects</h2>
             <p className="mt-1 text-sm text-gray-500">
               Manage client projects, rate history, and timesheets.
+            </p>
+          </Link>
+          <Link
+            href={`/tenant/${tenantId}/timesheets`}
+            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:border-blue-200 hover:shadow transition"
+          >
+            <h2 className="text-lg font-semibold text-gray-800">Timesheets</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Enter hours, submit for approval, and track timesheet status.
             </p>
           </Link>
         </div>

@@ -219,6 +219,7 @@ model Timesheet {
   aiValidationResult   Json?
   isCarryForward       Boolean           @default(false)
   originalTimesheetId  String?
+  carryForwardDates    Json?
   approvedBy           String?
   approvedAt           DateTime?
   lockedAt             DateTime?
