@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -111,32 +112,28 @@ export default function WeeklyGrid({
 
   const dailyTotals = weekDates.map((d) => hours[toDateKey(d)] ?? 0);
   const weeklyTotal = dailyTotals.reduce((a, b) => a + b, 0);
-
   const mergedErrors = { ...validationErrors, ...localErrors };
 
   return (
-    <div className="space-y-1">
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
-          <thead className="border-b border-gray-100 bg-gray-50/50">
+          <thead className="border-b border-border bg-muted/50">
             <tr>
-              {weekDates.map((d, i) => (
-                <th
-                  key={i}
-                  className="px-3 py-2.5 text-center font-medium text-gray-600 min-w-[90px]"
-                >
-                  <div>{DAY_LABELS[i]}</div>
-                  <div className="text-xs text-gray-400 font-normal">
-                    {d.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      timeZone: "UTC",
-                    })}
-                  </div>
-                </th>
-              ))}
-              <th className="px-3 py-2.5 text-center font-medium text-gray-600 min-w-[80px]">
-                Total
+              {weekDates.map((d, i) => {
+                const key = toDateKey(d);
+                const isDisabled = disabled || disabledDates.has(key);
+                return (
+                  <th key={i} className={cn("px-2 py-2.5 text-center min-w-[85px]", isDisabled && "opacity-40")}>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DAY_LABELS[i]}</div>
+                    <div className="text-[11px] text-muted-foreground/70 font-normal">
+                      {d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+                    </div>
+                  </th>
+                );
+              })}
+              <th className="px-3 py-2.5 text-center min-w-[70px]">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total</div>
               </th>
             </tr>
           </thead>
@@ -147,7 +144,7 @@ export default function WeeklyGrid({
                 const isDisabled = disabled || disabledDates.has(key);
                 const hasError = !!mergedErrors[key];
                 return (
-                  <td key={i} className="px-2 py-2 text-center">
+                  <td key={i} className="px-1.5 py-2 text-center">
                     <Input
                       type="number"
                       step="0.25"
@@ -157,30 +154,28 @@ export default function WeeklyGrid({
                       onChange={(e) => handleChange(key, e.target.value)}
                       disabled={isDisabled}
                       aria-invalid={hasError}
-                      className={`text-center w-full ${isDisabled ? "bg-gray-100 text-gray-400" : ""}`}
+                      className={cn(
+                        "text-center w-full tabular-nums",
+                        isDisabled && "bg-muted/50 text-muted-foreground/40 cursor-not-allowed"
+                      )}
                     />
                     {hasError && (
-                      <p className="mt-0.5 text-[10px] text-red-500">
-                        {mergedErrors[key]}
-                      </p>
+                      <p className="mt-0.5 text-[10px] text-destructive">{mergedErrors[key]}</p>
                     )}
                   </td>
                 );
               })}
-              <td className="px-3 py-2 text-center font-semibold text-gray-800">
-                {weeklyTotal.toFixed(2)}
+              <td className="px-3 py-2 text-center">
+                <div className="text-lg font-bold tabular-nums text-foreground">{weeklyTotal.toFixed(2)}</div>
               </td>
             </tr>
-            <tr className="border-t border-gray-100 bg-gray-50/30">
+            <tr className="border-t border-border bg-muted/30">
               {dailyTotals.map((t, i) => (
-                <td
-                  key={i}
-                  className="px-3 py-1.5 text-center text-xs font-medium text-gray-500"
-                >
-                  {t.toFixed(2)}
+                <td key={i} className="px-2 py-1.5 text-center text-xs font-medium tabular-nums text-muted-foreground">
+                  {t > 0 ? t.toFixed(2) : "—"}
                 </td>
               ))}
-              <td className="px-3 py-1.5 text-center text-xs font-bold text-gray-700">
+              <td className="px-3 py-1.5 text-center text-xs font-bold tabular-nums text-foreground">
                 {weeklyTotal.toFixed(2)}
               </td>
             </tr>
@@ -188,7 +183,10 @@ export default function WeeklyGrid({
         </table>
       </div>
       {saving && (
-        <p className="text-xs text-gray-400 text-right">Saving...</p>
+        <div className="flex items-center gap-1.5 justify-end">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          <p className="text-xs text-muted-foreground">Auto-saving...</p>
+        </div>
       )}
     </div>
   );

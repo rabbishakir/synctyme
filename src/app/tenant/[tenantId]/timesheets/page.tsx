@@ -1,7 +1,6 @@
 import { requireTenantAccess } from "@/lib/auth/tenant-guard";
 import { prisma } from "@/lib/db";
-import Link from "next/link";
-import LogoutButton from "@/components/auth/LogoutButton";
+import PageHeader from "@/components/layout/PageHeader";
 import TimesheetListClient from "@/components/tenant/TimesheetListClient";
 
 interface PageProps {
@@ -45,46 +44,34 @@ export default async function TimesheetsPage({ params }: PageProps) {
       });
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href={`/tenant/${tenantId}/dashboard`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              &larr; Dashboard
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">
-              Timesheets
-            </h1>
-            <p className="text-sm text-gray-500">
-              {session.user.email} &middot;{" "}
-              {membership.role.replace(/_/g, " ")}
-            </p>
-          </div>
-          <LogoutButton />
-        </div>
+    <>
+      <PageHeader
+        title="Timesheets"
+        description="Track, submit, and manage weekly timesheets."
+        breadcrumbs={[
+          { label: "Dashboard", href: `/tenant/${tenantId}/dashboard` },
+          { label: "Timesheets" },
+        ]}
+      />
 
-        <TimesheetListClient
-          timesheets={timesheets.map((t) => ({
-            id: t.id,
-            weekStart: t.weekStart.toISOString(),
-            status: t.status,
-            totalHours: t.entries.reduce(
-              (sum, e) => sum + Number(e.hours),
-              0
-            ),
-            consultantName: t.consultant.name,
-            consultantCode: t.consultant.consultantCode,
-            clientName: t.project.clientName,
-          }))}
-          consultants={consultants}
-          tenantId={tenantId}
-          canCreate={isConsultant}
-          showConsultantFilter={!isConsultant}
-        />
-      </div>
-    </main>
+      <TimesheetListClient
+        timesheets={timesheets.map((t) => ({
+          id: t.id,
+          weekStart: t.weekStart.toISOString(),
+          status: t.status,
+          totalHours: t.entries.reduce(
+            (sum, e) => sum + Number(e.hours),
+            0
+          ),
+          consultantName: t.consultant.name,
+          consultantCode: t.consultant.consultantCode,
+          clientName: t.project.clientName,
+        }))}
+        consultants={consultants}
+        tenantId={tenantId}
+        canCreate={isConsultant}
+        showConsultantFilter={!isConsultant}
+      />
+    </>
   );
 }

@@ -3,6 +3,9 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProjectOption {
   id: string;
@@ -41,14 +44,8 @@ export default function NewTimesheetForm({
     e.preventDefault();
     setError(null);
 
-    if (!projectId) {
-      setError("Please select a project");
-      return;
-    }
-    if (!weekStartStr) {
-      setError("Please select a week");
-      return;
-    }
+    if (!projectId) { setError("Please select a project"); return; }
+    if (!weekStartStr) { setError("Please select a week"); return; }
 
     setLoading(true);
     try {
@@ -68,6 +65,7 @@ export default function NewTimesheetForm({
         return;
       }
 
+      toast.success("Timesheet created");
       router.push(`/tenant/${tenantId}/timesheets/${data.timesheet.id}`);
     } catch {
       setError("Something went wrong");
@@ -77,33 +75,27 @@ export default function NewTimesheetForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Project
-        </label>
+    <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+      <div className="grid gap-2">
+        <Label>Project <span className="text-destructive">*</span></Label>
         <select
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+          className="h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"
         >
           <option value="">Select a project...</option>
           {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.clientName}
-            </option>
+            <option key={p.id} value={p.id}>{p.clientName}</option>
           ))}
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Week starting (Sunday)
-        </label>
+      <div className="grid gap-2">
+        <Label>Week starting (Sunday) <span className="text-destructive">*</span></Label>
         <select
           value={weekStartStr}
           onChange={(e) => setWeekStartStr(e.target.value)}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+          className="h-8 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"
         >
           <option value="">Select a week...</option>
           {nextSundays.map((s) => {
@@ -111,28 +103,29 @@ export default function NewTimesheetForm({
             const end = new Date(start);
             end.setUTCDate(start.getUTCDate() + 6);
             const fmt = (d: Date) =>
-              d.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                timeZone: "UTC",
-              });
+              d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
             return (
-              <option key={s} value={s}>
-                {fmt(start)} – {fmt(end)}
-              </option>
+              <option key={s} value={s}>{fmt(start)} – {fmt(end)}</option>
             );
           })}
         </select>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
       )}
 
-      <Button type="submit" disabled={loading}>
-        {loading ? "Creating..." : "Create Timesheet"}
-      </Button>
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+        <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading && <Loader2 size={15} className="animate-spin mr-1.5" />}
+          {loading ? "Creating..." : "Create Timesheet"}
+        </Button>
+      </div>
     </form>
   );
 }

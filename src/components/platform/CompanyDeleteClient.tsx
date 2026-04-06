@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface CompanyDeleteClientProps {
   companyId: string;
@@ -45,6 +46,7 @@ export default function CompanyDeleteClient({
         setError(typeof data.error === "string" ? data.error : "Request failed");
         return;
       }
+      toast.success("Deletion request submitted");
       router.refresh();
     } finally {
       setLoading(false);
@@ -66,6 +68,7 @@ export default function CompanyDeleteClient({
         setError(typeof data.error === "string" ? data.error : "Request failed");
         return;
       }
+      toast.success(`Deletion ${decision}d`);
       router.push("/platform/companies");
       router.refresh();
     } finally {
@@ -74,88 +77,60 @@ export default function CompanyDeleteClient({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900">{companyName}</h2>
-      <p className="mt-1 text-sm text-gray-500">Company ID: {companyId}</p>
+    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+      <h2 className="text-base font-semibold text-foreground">{companyName}</h2>
+      <p className="mt-1 text-xs text-muted-foreground font-mono">ID: {companyId}</p>
 
       {mode === "view" && deletionRequest && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p className="font-medium">Deletion request</p>
-          <p className="mt-1">
-            Status:{" "}
-            <strong>{deletionRequest.status.replace(/_/g, " ")}</strong>
-          </p>
-          <p className="mt-2 text-amber-950/90">{deletionRequest.reason}</p>
+          <p className="mt-1">Status: <strong>{deletionRequest.status.replace(/_/g, " ")}</strong></p>
+          <p className="mt-2">{deletionRequest.reason}</p>
         </div>
       )}
 
       {mode === "view" && !deletionRequest && (
-        <p className="mt-4 text-sm text-gray-600">
-          No deletion workflow is active for this company.
-        </p>
+        <p className="mt-4 text-sm text-muted-foreground">No deletion workflow is active for this company.</p>
       )}
 
       {mode === "initiate" && (
-        <form className="mt-6 space-y-4" onSubmit={initiate}>
-          <p className="text-sm text-gray-600">
-            This creates a pending deletion request and marks the company as
-            pending deletion. A System Admin must approve it before the company
-            is archived.
+        <form className="mt-5 space-y-4" onSubmit={initiate}>
+          <p className="text-sm text-muted-foreground">
+            This creates a pending deletion request. A System Admin must approve it before the company is archived.
           </p>
           <div className="grid gap-2">
-            <Label htmlFor="reason">Reason</Label>
-            <Input
-              id="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Why is this company being deleted?"
-              aria-label="Deletion reason"
-            />
+            <Label htmlFor="reason">Reason <span className="text-destructive">*</span></Label>
+            <Input id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this company being deleted?" />
           </div>
           {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">{error}</div>
           )}
-          <Button type="submit" disabled={loading || !reason.trim()}>
-            {loading ? "Submitting…" : "Initiate deletion"}
-          </Button>
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>Cancel</Button>
+            <Button type="submit" variant="destructive" disabled={loading || !reason.trim()}>
+              {loading && <Loader2 size={15} className="animate-spin mr-1.5" />}
+              {loading ? "Submitting..." : "Initiate Deletion"}
+            </Button>
+          </div>
         </form>
       )}
 
       {mode === "review" && deletionRequest && (
-        <div className="mt-6 space-y-4">
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">Request</p>
-            <p className="text-sm text-gray-800">
-              Status: {deletionRequest.status.replace(/_/g, " ")}
-            </p>
-            <p className="mt-2 text-sm text-gray-800">
-              <span className="text-gray-500">Reason: </span>
-              {deletionRequest.reason}
-            </p>
+        <div className="mt-5 space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Request details</p>
+            <p className="mt-1 text-sm text-foreground">Status: {deletionRequest.status.replace(/_/g, " ")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{deletionRequest.reason}</p>
           </div>
           {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">{error}</div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={() => review("approve")}
-              disabled={loading}
-            >
-              {loading ? "Processing…" : "Approve"}
+            <Button onClick={() => review("approve")} disabled={loading}>
+              {loading && <Loader2 size={15} className="animate-spin mr-1.5" />}
+              Approve
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => review("reject")}
-              disabled={loading}
-            >
-              Reject
-            </Button>
+            <Button variant="outline" onClick={() => review("reject")} disabled={loading}>Reject</Button>
           </div>
         </div>
       )}

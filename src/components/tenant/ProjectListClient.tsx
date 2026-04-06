@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Briefcase } from "lucide-react";
 
 interface ProjectRow {
   id: string;
@@ -47,7 +48,7 @@ export default function ProjectListClient({
         <select
           value={consultantFilter}
           onChange={(e) => setConsultantFilter(e.target.value)}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+          className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
         >
           <option value="ALL">All consultants</option>
           {consultants.map((c) => (
@@ -59,7 +60,7 @@ export default function ProjectListClient({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+          className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
         >
           <option value="ALL">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -68,59 +69,49 @@ export default function ProjectListClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          No projects found.
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
+            <Briefcase size={24} />
+          </div>
+          <p className="text-sm font-medium text-foreground">No projects found</p>
+          <p className="mt-1 text-xs text-muted-foreground">Try adjusting your filters.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100 bg-gray-50/50">
+            <thead className="border-b border-border bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Client
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Consultant
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Start
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  End
-                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Client</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden sm:table-cell">Consultant</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden md:table-cell">Start</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden lg:table-cell">End</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50">
+                <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <Link
                       href={`/tenant/${tenantId}/projects/${p.id}`}
-                      className="font-medium text-blue-600 hover:underline"
+                      className="font-medium text-primary hover:underline"
                     >
                       {p.clientName}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                     {p.consultantCode} — {p.consultantName}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge
-                      variant={p.status === "ACTIVE" ? "default" : "secondary"}
-                    >
+                    <Badge variant={p.status === "ACTIVE" ? "default" : "secondary"}>
                       {p.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {new Date(p.startDate).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {p.endDate
-                      ? new Date(p.endDate).toLocaleDateString()
-                      : "—"}
+                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                    {p.endDate ? new Date(p.endDate).toLocaleDateString() : "—"}
                   </td>
                 </tr>
               ))}

@@ -5,7 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { Loader2, Copy, Check } from "lucide-react";
+import { Loader2, Copy, Check, CheckCircle2, Building2, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+const inputClassName =
+  "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
 const companySchema = z.object({
   companyName: z.string().min(2, "Company name must be at least 2 characters"),
@@ -31,6 +37,7 @@ export default function CompanyCreateForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    reset,
   } = useForm<CompanyFormData>({ resolver: zodResolver(companySchema) });
 
   const onSubmit = async (data: CompanyFormData) => {
@@ -54,9 +61,7 @@ export default function CompanyCreateForm() {
       try {
         body = JSON.parse(raw) as typeof body;
       } catch {
-        setServerError(
-          `Unexpected response from server (${res.status}). Try again or check the server logs.`
-        );
+        setServerError(`Unexpected response from server (${res.status}). Try again or check the server logs.`);
         return;
       }
     } else if (!res.ok) {
@@ -65,19 +70,16 @@ export default function CompanyCreateForm() {
     }
 
     if (!res.ok) {
-      setServerError(
-        typeof body.error === "string" ? body.error : "Failed to create company."
-      );
+      setServerError(typeof body.error === "string" ? body.error : "Failed to create company.");
       return;
     }
 
     if (!body.tempPassword || !body.adminEmail || !body.company?.name) {
-      setServerError(
-        "Company was created but the response was incomplete. Check the companies list."
-      );
+      setServerError("Company was created but the response was incomplete. Check the companies list.");
       return;
     }
 
+    toast.success("Company created successfully!");
     setResult({
       tempPassword: body.tempPassword,
       adminEmail: body.adminEmail,
@@ -89,122 +91,158 @@ export default function CompanyCreateForm() {
     if (!result) return;
     await navigator.clipboard.writeText(result.tempPassword);
     setCopied(true);
+    toast.success("Password copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
   if (result) {
     return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-8 space-y-4">
-        <h2 className="text-lg font-semibold text-green-800">
-          ✅ Company &quot;{result.companyName}&quot; created successfully
-        </h2>
-        <p className="text-sm text-gray-700">
-          Admin account created for{" "}
-          <span className="font-mono font-semibold">{result.adminEmail}</span>.
-          Share the temporary password below with them — it will not be shown
-          again.
-        </p>
-        <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-white px-4 py-3">
-          <span className="flex-1 font-mono text-sm tracking-widest">
-            {result.tempPassword}
-          </span>
-          <button
-            onClick={copyPassword}
-            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-          >
-            {copied ? (
-              <Check size={15} className="text-green-500" />
-            ) : (
-              <Copy size={15} />
-            )}
-            {copied ? "Copied" : "Copy"}
-          </button>
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <CheckCircle2 size={22} />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-emerald-900">Company created successfully</h2>
+              <p className="text-sm text-emerald-700">&quot;{result.companyName}&quot; is ready to use</p>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => router.push("/platform/companies")}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Back to Companies
-        </button>
+
+        <div className="px-6 py-5 space-y-5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Admin email</span>
+              <span className="font-mono font-medium text-foreground">{result.adminEmail}</span>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Temporary password</p>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3">
+                <code className="flex-1 text-sm font-mono tracking-widest text-foreground">{result.tempPassword}</code>
+                <button
+                  onClick={copyPassword}
+                  className="flex items-center gap-1.5 rounded-md bg-card border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs text-amber-600">
+                Save this password — it will not be shown again.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 border-t border-border pt-5">
+            <Button onClick={() => router.push("/platform/companies")}>
+              <Building2 size={15} className="mr-1.5" />
+              View Companies
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResult(null);
+                setCopied(false);
+                setServerError(null);
+                reset();
+              }}
+            >
+              Create Another
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden" noValidate>
       {serverError && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mx-6 mt-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
           {serverError}
         </div>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
-          Company Name
-        </label>
-        <input
-          id="companyName"
-          type="text"
-          {...register("companyName")}
-          placeholder="Acme Corp"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          disabled={isSubmitting}
-        />
-        {errors.companyName && (
-          <p className="text-xs text-red-600">{errors.companyName.message}</p>
-        )}
-      </div>
+      {/* Section 1: Company Information */}
+      <fieldset className="px-6 py-5 space-y-4 border-b border-border">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Company Information</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">Basic details about the new company tenant</p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="companyName">
+            Company Name <span className="text-destructive">*</span>
+          </Label>
+          <input
+            id="companyName"
+            {...register("companyName")}
+            placeholder="Acme Corp"
+            disabled={isSubmitting}
+            className={inputClassName}
+          />
+          <p className="text-xs text-muted-foreground">This will be displayed across the platform</p>
+          {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
+        </div>
+      </fieldset>
 
-      <div className="space-y-1">
-        <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-700">
-          Admin Email
-        </label>
-        <input
-          id="adminEmail"
-          type="email"
-          {...register("adminEmail")}
-          placeholder="admin@company.com"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          disabled={isSubmitting}
-        />
-        {errors.adminEmail && (
-          <p className="text-xs text-red-600">{errors.adminEmail.message}</p>
-        )}
-      </div>
+      {/* Section 2: Admin Account */}
+      <fieldset className="px-6 py-5 space-y-4 border-b border-border">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Company Admin</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            A temporary password will be generated and shown after creation
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="adminName">
+              Admin Name <span className="text-destructive">*</span>
+            </Label>
+            <input
+              id="adminName"
+              {...register("adminName")}
+              placeholder="Jane Smith"
+              disabled={isSubmitting}
+              className={inputClassName}
+            />
+            {errors.adminName && <p className="text-xs text-destructive">{errors.adminName.message}</p>}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="adminEmail">
+              Admin Email <span className="text-destructive">*</span>
+            </Label>
+            <input
+              id="adminEmail"
+              type="email"
+              {...register("adminEmail")}
+              placeholder="admin@company.com"
+              disabled={isSubmitting}
+              className={inputClassName}
+            />
+            {errors.adminEmail && <p className="text-xs text-destructive">{errors.adminEmail.message}</p>}
+          </div>
+        </div>
+      </fieldset>
 
-      <div className="space-y-1">
-        <label htmlFor="adminName" className="block text-sm font-medium text-gray-700">
-          Admin Name
-        </label>
-        <input
-          id="adminName"
-          type="text"
-          {...register("adminName")}
-          placeholder="Jane Smith"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          disabled={isSubmitting}
-        />
-        {errors.adminName && (
-          <p className="text-xs text-red-600">{errors.adminName.message}</p>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
-        >
-          {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-          {isSubmitting ? "Creating…" : "Create Company"}
-        </button>
-        <button
+      {/* Form footer */}
+      <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/30">
+        <Button
           type="button"
+          variant="outline"
           onClick={() => router.push("/platform/companies")}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          disabled={isSubmitting}
         >
           Cancel
-        </button>
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <Loader2 size={15} className="animate-spin mr-1.5" />
+          ) : (
+            <ArrowRight size={15} className="mr-1.5" />
+          )}
+          {isSubmitting ? "Creating..." : "Create Company"}
+        </Button>
       </div>
     </form>
   );

@@ -7,6 +7,11 @@ import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+
+const inputClassName =
+  "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
 const step1Schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -39,23 +44,12 @@ export default function LoginForm({ errorParam }: LoginFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  /** Held only between step 1 (MFA required) and step 2; cleared after sign-in or back. */
-  const [pending, setPending] = useState<{
-    email: string;
-    password: string;
-  } | null>(null);
+  const [pending, setPending] = useState<{ email: string; password: string } | null>(null);
 
-  const form1 = useForm<Step1Data>({
-    resolver: zodResolver(step1Schema),
-  });
+  const form1 = useForm<Step1Data>({ resolver: zodResolver(step1Schema) });
+  const form2 = useForm<Step2Data>({ resolver: zodResolver(step2Schema) });
 
-  const form2 = useForm<Step2Data>({
-    resolver: zodResolver(step2Schema),
-  });
-
-  const errorMessage = errorParam
-    ? (errorMessages[errorParam] ?? errorMessages.default)
-    : null;
+  const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages.default) : null;
 
   const goBackToStep1 = () => {
     setStep(1);
@@ -64,23 +58,12 @@ export default function LoginForm({ errorParam }: LoginFormProps) {
     setServerError(null);
   };
 
-  const completeSignIn = async (
-    email: string,
-    password: string,
-    mfaToken: string
-  ) => {
-    const result = await signIn("credentials", {
-      email,
-      password,
-      mfaToken,
-      redirect: false,
-    });
-
+  const completeSignIn = async (email: string, password: string, mfaToken: string) => {
+    const result = await signIn("credentials", { email, password, mfaToken, redirect: false });
     if (!result?.ok) {
       setServerError(errorMessages.CredentialsSignin);
       return false;
     }
-
     router.push("/");
     router.refresh();
     return true;
@@ -124,91 +107,70 @@ export default function LoginForm({ errorParam }: LoginFormProps) {
   return (
     <div className="space-y-5">
       {(errorMessage || serverError) && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
           {serverError ?? errorMessage}
         </div>
       )}
 
       {step === 1 && (
-        <form
-          onSubmit={form1.handleSubmit(onSubmitStep1)}
-          className="space-y-5"
-          noValidate
-        >
-          <div className="space-y-1">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
+        <form onSubmit={form1.handleSubmit(onSubmitStep1)} className="space-y-4" noValidate>
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email address</Label>
             <input
               id="email"
               type="email"
               autoComplete="email"
               {...form1.register("email")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
               disabled={busy}
+              placeholder="you@company.com"
+              className={inputClassName}
             />
             {form1.formState.errors.email && (
-              <p className="text-xs text-red-600">
-                {form1.formState.errors.email.message}
-              </p>
+              <p className="text-xs text-destructive">{form1.formState.errors.email.message}</p>
             )}
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 {...form1.register("password")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 disabled={busy}
+                className={`${inputClassName} pr-10`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             {form1.formState.errors.password && (
-              <p className="text-xs text-red-600">
-                {form1.formState.errors.password.message}
-              </p>
+              <p className="text-xs text-destructive">{form1.formState.errors.password.message}</p>
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
-          >
-            {submitting1 && <Loader2 size={16} className="animate-spin" />}
-            {submitting1 ? "Checking…" : "Continue"}
-          </button>
+          <Button type="submit" disabled={busy} className="w-full">
+            {submitting1 && <Loader2 size={16} className="animate-spin mr-1.5" />}
+            {submitting1 ? "Checking..." : "Continue"}
+          </Button>
         </form>
       )}
 
       {step === 2 && pending && (
-        <form
-          onSubmit={form2.handleSubmit(onSubmitStep2)}
-          className="space-y-5"
-          noValidate
-        >
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-            <span className="text-gray-500">Signing in as </span>
-            <span className="font-medium">{pending.email}</span>
+        <form onSubmit={form2.handleSubmit(onSubmitStep2)} className="space-y-4" noValidate>
+          <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Signing in as </span>
+            <span className="font-medium text-foreground">{pending.email}</span>
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="mfaToken" className="block text-sm font-medium text-gray-700">
-              Authenticator code
-            </label>
+          <div className="grid gap-2">
+            <Label htmlFor="mfaToken">Authenticator code</Label>
             <input
               id="mfaToken"
               type="text"
@@ -218,37 +180,24 @@ export default function LoginForm({ errorParam }: LoginFormProps) {
               autoFocus
               placeholder="000000"
               {...form2.register("mfaToken")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg tracking-widest shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
               disabled={busy}
+              className={`${inputClassName} text-center text-lg tracking-widest`}
             />
             {form2.formState.errors.mfaToken && (
-              <p className="text-xs text-red-600">
-                {form2.formState.errors.mfaToken.message}
-              </p>
+              <p className="text-xs text-destructive">{form2.formState.errors.mfaToken.message}</p>
             )}
-            <p className="text-xs text-gray-500">
-              Enter the 6-digit code from your authenticator app.
-            </p>
+            <p className="text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-            <button
-              type="button"
-              onClick={goBackToStep1}
-              disabled={busy}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
-            >
-              <ArrowLeft size={16} />
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" onClick={goBackToStep1} disabled={busy} className="flex-shrink-0">
+              <ArrowLeft size={16} className="mr-1" />
               Back
-            </button>
-            <button
-              type="submit"
-              disabled={busy}
-              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
-            >
-              {submitting2 && <Loader2 size={16} className="animate-spin" />}
-              {submitting2 ? "Signing in…" : "Sign in"}
-            </button>
+            </Button>
+            <Button type="submit" disabled={busy} className="flex-1">
+              {submitting2 && <Loader2 size={16} className="animate-spin mr-1.5" />}
+              {submitting2 ? "Signing in..." : "Sign in"}
+            </Button>
           </div>
         </form>
       )}

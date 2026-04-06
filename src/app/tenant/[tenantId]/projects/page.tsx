@@ -1,8 +1,10 @@
 import { requireTenantAccess } from "@/lib/auth/tenant-guard";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import LogoutButton from "@/components/auth/LogoutButton";
+import PageHeader from "@/components/layout/PageHeader";
 import ProjectListClient from "@/components/tenant/ProjectListClient";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ tenantId: string }>;
@@ -10,7 +12,7 @@ interface PageProps {
 
 export default async function ProjectsPage({ params }: PageProps) {
   const { tenantId } = await params;
-  const { session, membership } = await requireTenantAccess(tenantId);
+  const { membership } = await requireTenantAccess(tenantId);
 
   const projects = await prisma.project.findMany({
     where: { companyId: tenantId },
@@ -35,51 +37,39 @@ export default async function ProjectsPage({ params }: PageProps) {
   const canAdd = ["COMPANY_ADMIN", "HR"].includes(membership.role);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href={`/tenant/${tenantId}/dashboard`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">
-              Projects
-            </h1>
-            <p className="text-sm text-gray-500">
-              {session.user.email} &middot;{" "}
-              {membership.role.replace(/_/g, " ")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canAdd && (
-              <Link
-                href={`/tenant/${tenantId}/projects/new`}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-              >
+    <>
+      <PageHeader
+        title="Projects"
+        description="Manage client projects, rate history, and assignments."
+        breadcrumbs={[
+          { label: "Dashboard", href: `/tenant/${tenantId}/dashboard` },
+          { label: "Projects" },
+        ]}
+        actions={
+          canAdd ? (
+            <Link href={`/tenant/${tenantId}/projects/new`}>
+              <Button size="sm">
+                <Plus size={16} data-icon="inline-start" />
                 Add Project
-              </Link>
-            )}
-            <LogoutButton />
-          </div>
-        </div>
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
-        <ProjectListClient
-          projects={projects.map((p) => ({
-            id: p.id,
-            clientName: p.clientName,
-            consultantName: p.consultant.name,
-            consultantCode: p.consultant.consultantCode,
-            status: p.status,
-            startDate: p.startDate.toISOString(),
-            endDate: p.endDate?.toISOString() ?? null,
-          }))}
-          consultants={consultants}
-          tenantId={tenantId}
-        />
-      </div>
-    </main>
+      <ProjectListClient
+        projects={projects.map((p) => ({
+          id: p.id,
+          clientName: p.clientName,
+          consultantName: p.consultant.name,
+          consultantCode: p.consultant.consultantCode,
+          status: p.status,
+          startDate: p.startDate.toISOString(),
+          endDate: p.endDate?.toISOString() ?? null,
+        }))}
+        consultants={consultants}
+        tenantId={tenantId}
+      />
+    </>
   );
 }

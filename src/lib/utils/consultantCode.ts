@@ -9,10 +9,10 @@ const CODE_REGEX = /^CST-\d{4}$/;
  * Format: CST-0001, CST-0002, etc.
  */
 export async function generateConsultantCode(
-  companyId: string
+  _companyId: string
 ): Promise<string> {
   const latest = await prisma.consultant.findFirst({
-    where: { companyId },
+    where: { consultantCode: { startsWith: CODE_PREFIX } },
     orderBy: { consultantCode: "desc" },
     select: { consultantCode: true },
   });

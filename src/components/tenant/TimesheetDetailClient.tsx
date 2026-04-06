@@ -152,60 +152,51 @@ export default function TimesheetDetailClient({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Status + Info */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {timesheet.project.clientName}
-          </h2>
-          <p className="text-sm text-gray-500">
-            {timesheet.consultant.consultantCode} —{" "}
-            {timesheet.consultant.name}
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">{timesheet.project.clientName}</h2>
+            <Badge variant={STATUS_VARIANT[timesheet.status] ?? "outline"}>{timesheet.status}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {timesheet.consultant.consultantCode} — {timesheet.consultant.name}
           </p>
           {timesheet.isCarryForward && (
-            <p className="mt-1 text-xs text-amber-600 font-medium">
-              Carry-forward from previous period
-            </p>
+            <p className="mt-1 text-xs text-amber-600 font-medium">Carry-forward from previous period</p>
           )}
         </div>
-        <Badge variant={STATUS_VARIANT[timesheet.status] ?? "outline"} className="text-sm px-3 py-1">
-          {timesheet.status}
-        </Badge>
+        {currentRate && (
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Pay Rate</p>
+            <p className="text-lg font-bold tabular-nums text-foreground">${currentRate}/hr</p>
+          </div>
+        )}
       </div>
 
       {/* Rejection notice */}
       {isRejected && timesheet.rejectionReason && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-          <p className="text-sm font-medium text-red-800">Rejected</p>
-          <p className="mt-1 text-sm text-red-700">
-            {timesheet.rejectionReason}
-          </p>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <p className="text-sm font-medium text-destructive">Rejected</p>
+          <p className="mt-1 text-sm text-destructive/80">{timesheet.rejectionReason}</p>
         </div>
       )}
 
       {/* Pending approval notice */}
       {isSubmitted && !isAccounts && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-          <p className="text-sm text-blue-800">
-            This timesheet has been submitted and is pending approval.
-          </p>
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+          <p className="text-sm text-primary">This timesheet has been submitted and is pending approval.</p>
         </div>
       )}
 
-      {/* Locked badge */}
+      {/* Locked / Approved notice */}
       {(isLocked || isApproved) && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-          <p className="text-sm text-gray-600">
-            This timesheet is{" "}
-            <span className="font-semibold">
-              {isLocked ? "locked" : "approved"}
-            </span>
-            . No further edits are allowed.
+        <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            This timesheet is <span className="font-semibold text-foreground">{isLocked ? "locked" : "approved"}</span>. No further edits are allowed.
           </p>
           {timesheet.reopenReason && (
-            <p className="mt-1 text-xs text-gray-500">
-              Last reopened: {timesheet.reopenReason}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Last reopened: {timesheet.reopenReason}</p>
           )}
         </div>
       )}
@@ -227,10 +218,10 @@ export default function TimesheetDetailClient({
 
       {/* File Upload */}
       <div>
-        <h3 className="text-sm font-medium text-gray-700 mb-2">
+        <h3 className="text-sm font-medium text-foreground mb-2">
           Supporting Document
           {timesheet.project.clientApprovedTimesheetRequired && (
-            <span className="ml-1 text-red-500">*</span>
+            <span className="ml-1 text-destructive">*</span>
           )}
         </h3>
         <FileUpload
@@ -248,11 +239,11 @@ export default function TimesheetDetailClient({
 
       {/* Error */}
       {actionError && (
-        <p className="text-sm text-red-600">{actionError}</p>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{actionError}</div>
       )}
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-2 border-t border-gray-200 pt-4">
+      <div className="flex flex-wrap gap-2 border-t border-border pt-4">
         {/* Consultant: Submit */}
         {canEdit && (
           <Button
@@ -323,14 +314,12 @@ export default function TimesheetDetailClient({
 
       {/* Reason Modal (Reject / Reopen) */}
       {showReasonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {showReasonModal === "reject"
-                ? "Reject Timesheet"
-                : "Reopen Timesheet"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl animate-fade-in">
+            <h3 className="text-lg font-semibold text-foreground">
+              {showReasonModal === "reject" ? "Reject Timesheet" : "Reopen Timesheet"}
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {showReasonModal === "reject"
                 ? "Provide a reason for rejecting this timesheet."
                 : "Provide a reason for reopening this locked timesheet."}
@@ -339,7 +328,7 @@ export default function TimesheetDetailClient({
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
               rows={3}
-              className="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="mt-3 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30 outline-none"
               placeholder="Reason..."
             />
             <div className="mt-4 flex justify-end gap-2">
@@ -378,31 +367,20 @@ export default function TimesheetDetailClient({
 
       {/* Carry Forward Modal */}
       {showCarryForward && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Carry Forward
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Select dates to carry forward to the next pay period. A new DRAFT
-              timesheet will be created for the following week.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl animate-fade-in">
+            <h3 className="text-lg font-semibold text-foreground">Carry Forward</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Select dates to carry forward to the next pay period. A new DRAFT timesheet will be created.
             </p>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-1.5">
               {getNextWeekDates(timesheet.weekStart).map((d) => {
                 const key = d.toISOString().slice(0, 10);
-                const label = d.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  timeZone: "UTC",
-                });
+                const label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
                 const checked = carryForwardDates.has(key);
                 return (
-                  <label
-                    key={key}
-                    className="flex items-center gap-2 text-sm cursor-pointer"
-                  >
+                  <label key={key} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/50 transition-colors">
                     <input
                       type="checkbox"
                       checked={checked}
@@ -414,9 +392,9 @@ export default function TimesheetDetailClient({
                           return next;
                         });
                       }}
-                      className="rounded border-gray-300"
+                      className="h-4 w-4 rounded border-input accent-primary"
                     />
-                    <span className="text-gray-700">{label}</span>
+                    <span className="text-foreground">{label}</span>
                   </label>
                 );
               })}

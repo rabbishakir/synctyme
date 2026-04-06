@@ -1,8 +1,10 @@
 import { requireTenantAccess } from "@/lib/auth/tenant-guard";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import LogoutButton from "@/components/auth/LogoutButton";
+import PageHeader from "@/components/layout/PageHeader";
 import ConsultantListClient from "@/components/tenant/ConsultantListClient";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ tenantId: string }>;
@@ -10,7 +12,7 @@ interface PageProps {
 
 export default async function ConsultantsPage({ params }: PageProps) {
   const { tenantId } = await params;
-  const { session, membership } = await requireTenantAccess(tenantId);
+  const { membership } = await requireTenantAccess(tenantId);
 
   const consultants = await prisma.consultant.findMany({
     where: { companyId: tenantId },
@@ -29,46 +31,34 @@ export default async function ConsultantsPage({ params }: PageProps) {
   const canAdd = ["COMPANY_ADMIN", "HR"].includes(membership.role);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href={`/tenant/${tenantId}/dashboard`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">
-              Consultants
-            </h1>
-            <p className="text-sm text-gray-500">
-              {session.user.email} &middot;{" "}
-              {membership.role.replace(/_/g, " ")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canAdd && (
-              <Link
-                href={`/tenant/${tenantId}/consultants/new`}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-              >
+    <>
+      <PageHeader
+        title="Consultants"
+        description="Manage consultant profiles and employment cycles."
+        breadcrumbs={[
+          { label: "Dashboard", href: `/tenant/${tenantId}/dashboard` },
+          { label: "Consultants" },
+        ]}
+        actions={
+          canAdd ? (
+            <Link href={`/tenant/${tenantId}/consultants/new`}>
+              <Button size="sm">
+                <Plus size={16} data-icon="inline-start" />
                 Add Consultant
-              </Link>
-            )}
-            <LogoutButton />
-          </div>
-        </div>
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
-        <ConsultantListClient
-          consultants={consultants.map((c) => ({
-            ...c,
-            createdAt: c.createdAt.toISOString(),
-            projectCount: c._count.projects,
-          }))}
-          tenantId={tenantId}
-        />
-      </div>
-    </main>
+      <ConsultantListClient
+        consultants={consultants.map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(),
+          projectCount: c._count.projects,
+        }))}
+        tenantId={tenantId}
+      />
+    </>
   );
 }

@@ -10,11 +10,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import FLACInput from "@/components/flac/FLACInput";
-import { getFieldAccess } from "@/lib/flac";
-import { useSession } from "next-auth/react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import type { TenantRole } from "@prisma/client";
+import { Plus, Users, Loader2 } from "lucide-react";
 
 interface MemberRow {
   id: string;
@@ -32,23 +33,12 @@ interface UsersSettingsClientProps {
 
 const ROLE_OPTIONS: TenantRole[] = ["HR", "ACCOUNTS", "CONSULTANT"];
 
-function resolveRole(session: {
-  role?: string | null;
-  platformRole?: string | null;
-}): string {
-  if (session.role) return session.role;
-  if (session.platformRole === "SUPER_ADMIN") return "SUPER_ADMIN";
-  if (session.platformRole === "SYSTEM_ADMIN") return "SYSTEM_ADMIN";
-  return "CONSULTANT";
-}
-
 export default function UsersSettingsClient({
   tenantId,
   initialMembers,
   canManageUsers,
 }: UsersSettingsClientProps) {
   const router = useRouter();
-  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -57,12 +47,12 @@ export default function UsersSettingsClient({
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState(initialMembers);
 
-  const roleAccess = session?.user
-    ? getFieldAccess(resolveRole(session.user), "TenantUserInvite", "role")
-    : "NO_ACCESS";
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      setError("Name and email are required.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -76,10 +66,12 @@ export default function UsersSettingsClient({
         setError(typeof data.error === "string" ? data.error : "Request failed");
         return;
       }
+      toast.success("User invited successfully");
       setOpen(false);
       setName("");
       setEmail("");
       setRole("HR");
+      setError(null);
       router.refresh();
       if (data.member) {
         setMembers((prev) => [
@@ -99,77 +91,81 @@ export default function UsersSettingsClient({
   }
 
   async function resetPassword(targetUserId: string) {
-    setError(null);
     const res = await fetch(
       `/api/tenant/${tenantId}/users/${targetUserId}/reset-password`,
       { method: "POST" }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(typeof data.error === "string" ? data.error : "Reset failed");
+      toast.error(typeof data.error === "string" ? data.error : "Reset failed");
       return;
     }
-    alert(
-      `Temporary password (copy now; also emailed if configured): ${data.tempPassword}`
-    );
+    toast.success(`Temporary password: ${data.tempPassword}`, { duration: 15000 });
   }
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
 
   return (
     <div>
       {canManageUsers && (
         <div className="mb-4 flex justify-end">
-          <Button type="button" onClick={() => setOpen(true)}>
+          <Button type="button" size="sm" onClick={() => setOpen(true)}>
+            <Plus size={16} className="mr-1.5" />
             Add User
           </Button>
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">
-                Email
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-600">
-                Role
-              </th>
-              <th className="px-4 py-3 text-right font-semibold text-gray-600">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {members.map((m) => (
-              <tr key={m.id}>
-                <td className="px-4 py-3 font-medium text-gray-900">{m.email}</td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
-                    {m.role.replace(/_/g, " ")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {canManageUsers && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resetPassword(m.userId)}
-                    >
-                      Password reset
-                    </Button>
-                  )}
-                </td>
+      {members.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
+            <Users size={24} />
+          </div>
+          <p className="text-sm font-medium text-foreground">No users yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">Invite team members to get started.</p>
+          {canManageUsers && (
+            <Button size="sm" className="mt-4" onClick={() => setOpen(true)}>
+              <Plus size={15} className="mr-1" />
+              Add User
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden sm:table-cell">Joined</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {error && (
-        <p className="mt-3 text-sm text-red-600" role="alert">
-          {error}
-        </p>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {members.map((m) => (
+                <tr key={m.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-medium text-foreground">{m.email}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant="secondary">{m.role.replace(/_/g, " ")}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                    {formatDate(m.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {canManageUsers && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => resetPassword(m.userId)}>
+                        Reset Password
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -178,60 +174,68 @@ export default function UsersSettingsClient({
             <DialogHeader>
               <DialogTitle>Add user</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3 py-2">
+
+            <div className="grid gap-4 py-4">
+              {error && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
               <div className="grid gap-1.5">
-                <Label htmlFor="invite-name">Name</Label>
-                <FLACInput
-                  fieldName="name"
-                  entity="TenantUserInvite"
+                <Label htmlFor="invite-name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="invite-name"
+                  type="text"
+                  placeholder="John Doe"
                   value={name}
-                  onChange={setName}
-                  aria-label="Name"
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
                 />
               </div>
+
               <div className="grid gap-1.5">
-                <Label htmlFor="invite-email">Email</Label>
-                <FLACInput
-                  fieldName="email"
-                  entity="TenantUserInvite"
-                  value={email}
-                  onChange={setEmail}
+                <Label htmlFor="invite-email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="invite-email"
                   type="email"
-                  aria-label="Email"
+                  placeholder="john@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
               </div>
+
               <div className="grid gap-1.5">
                 <Label htmlFor="invite-role">Role</Label>
-                {roleAccess === "EDIT" ? (
-                  <select
-                    id="invite-role"
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as TenantRole)}
-                  >
-                    {ROLE_OPTIONS.map((r) => (
-                      <option key={r} value={r}>
-                        {r.replace(/_/g, " ")}
-                      </option>
-                    ))}
-                  </select>
-                ) : roleAccess === "VIEW" ? (
-                  <span className="text-sm text-gray-700">
-                    {role.replace(/_/g, " ")}
-                  </span>
-                ) : null}
+                <select
+                  id="invite-role"
+                  className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as TenantRole)}
+                  disabled={loading}
+                >
+                  {ROLE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  A temporary password will be generated for the new user.
+                </p>
               </div>
             </div>
+
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : "Invite"}
+                {loading && <Loader2 size={14} className="animate-spin mr-1.5" />}
+                {loading ? "Inviting..." : "Invite"}
               </Button>
             </DialogFooter>
           </form>

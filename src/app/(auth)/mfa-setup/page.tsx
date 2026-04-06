@@ -8,7 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 const mfaSchema = z.object({
   token: z
@@ -78,8 +80,8 @@ export default function MfaSetupPage() {
 
   if (status === "loading" || loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </main>
     );
   }
@@ -87,63 +89,51 @@ export default function MfaSetupPage() {
   if (!session) return null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <ShieldCheck className="mx-auto h-10 w-10 text-blue-600" />
-          <h1 className="mt-3 text-2xl font-bold text-gray-900">
-            Set Up Two-Factor Authentication
+    <main className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 text-center">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3">
+            <ShieldCheck size={20} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Two-Factor Authentication
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Scan the QR code with your authenticator app, then enter the 6-digit
-            code to verify.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Scan the QR code with your authenticator app, then verify with the 6-digit code.
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
           {verified ? (
-            <div className="flex flex-col items-center gap-3 text-center">
-              <ShieldCheck className="h-12 w-12 text-green-500" />
-              <p className="font-semibold text-green-700">
-                MFA enabled successfully! Redirecting…
-              </p>
+            <div className="flex flex-col items-center gap-3 text-center py-4">
+              <CheckCircle className="h-12 w-12 text-emerald-500" />
+              <p className="font-semibold text-emerald-700">MFA enabled successfully! Redirecting...</p>
             </div>
           ) : (
             <>
-              {/* QR Code */}
               {qrCodeUrl && (
                 <div className="flex justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrCodeUrl} alt="MFA QR Code" className="h-48 w-48 rounded-md border" />
+                  <img src={qrCodeUrl} alt="MFA QR Code" className="h-48 w-48 rounded-lg border border-border" />
                 </div>
               )}
 
-              {/* Manual entry */}
               {secret && (
-                <div className="rounded-md bg-gray-50 border border-gray-200 px-4 py-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">
-                    Or enter this code manually:
-                  </p>
-                  <p className="font-mono text-sm font-semibold tracking-widest text-gray-800 break-all">
-                    {secret}
-                  </p>
+                <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
+                  <p className="font-mono text-sm font-semibold tracking-widest text-foreground break-all">{secret}</p>
                 </div>
               )}
 
               {serverError && (
-                <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {serverError}
                 </div>
               )}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-1">
-                  <label
-                    htmlFor="token"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Verification Code
-                  </label>
+                <div className="grid gap-2">
+                  <Label htmlFor="token">Verification Code</Label>
                   <input
                     id="token"
                     type="text"
@@ -152,21 +142,15 @@ export default function MfaSetupPage() {
                     placeholder="000000"
                     autoComplete="one-time-code"
                     {...register("token")}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg tracking-widest shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-center text-lg tracking-widest"
                   />
-                  {errors.token && (
-                    <p className="text-xs text-red-600">{errors.token.message}</p>
-                  )}
+                  {errors.token && <p className="text-xs text-destructive">{errors.token.message}</p>}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
-                >
-                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                  {isSubmitting ? "Verifying…" : "Enable MFA"}
-                </button>
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting && <Loader2 size={16} className="animate-spin mr-1.5" />}
+                  {isSubmitting ? "Verifying..." : "Enable MFA"}
+                </Button>
               </form>
             </>
           )}

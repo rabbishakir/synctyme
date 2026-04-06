@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Search, Users } from "lucide-react";
 
 interface ConsultantRow {
   id: string;
@@ -37,17 +38,20 @@ export default function ConsultantListClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <Input
-          placeholder="Search by name or code..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-xs flex-1">
+          <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+          className="h-8 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
         >
           <option value="ALL">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -56,62 +60,46 @@ export default function ConsultantListClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          No consultants found.
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
+            <Users size={24} />
+          </div>
+          <p className="text-sm font-medium text-foreground">No consultants found</p>
+          <p className="mt-1 text-xs text-muted-foreground">Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100 bg-gray-50/50">
+            <thead className="border-b border-border bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Code
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Email
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Projects
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  Added
-                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Code</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden md:table-cell">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden sm:table-cell">Projects</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground hidden lg:table-cell">Added</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50/50">
+                <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs">
                     <Link
                       href={`/tenant/${tenantId}/consultants/${c.id}`}
-                      className="text-blue-600 hover:underline"
+                      className="text-primary hover:underline font-medium"
                     >
                       {c.consultantCode}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {c.name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{c.email}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{c.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.email}</td>
                   <td className="px-4 py-3">
-                    <Badge
-                      variant={
-                        c.status === "ACTIVE" ? "default" : "secondary"
-                      }
-                    >
+                    <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"}>
                       {c.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {c.projectCount}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{c.projectCount}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">
                     {new Date(c.createdAt).toLocaleDateString()}
                   </td>
                 </tr>

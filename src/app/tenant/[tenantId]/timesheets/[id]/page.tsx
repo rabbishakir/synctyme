@@ -1,8 +1,7 @@
 import { requireTenantAccess } from "@/lib/auth/tenant-guard";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import LogoutButton from "@/components/auth/LogoutButton";
+import PageHeader from "@/components/layout/PageHeader";
 import TimesheetDetailClient from "@/components/tenant/TimesheetDetailClient";
 
 interface PageProps {
@@ -56,6 +55,12 @@ export default async function TimesheetDetailPage({ params }: PageProps) {
 
   const isOwner = timesheet.consultant.userId === session.user.id;
 
+  const weekEnd = new Date(timesheet.weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const weekLabel = `${fmt(timesheet.weekStart)} – ${fmt(weekEnd)}`;
+
   const serialized = {
     ...timesheet,
     weekStart: timesheet.weekStart.toISOString(),
@@ -65,6 +70,7 @@ export default async function TimesheetDetailPage({ params }: PageProps) {
     createdAt: timesheet.createdAt.toISOString(),
     updatedAt: timesheet.updatedAt.toISOString(),
     lockedAt: timesheet.lockedAt?.toISOString() ?? null,
+    carryForwardDates: (timesheet.carryForwardDates as string[] | null) ?? null,
     entries: timesheet.entries.map((e) => ({
       date: e.date.toISOString(),
       hours: Number(e.hours),
@@ -89,36 +95,23 @@ export default async function TimesheetDetailPage({ params }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href={`/tenant/${tenantId}/timesheets`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              &larr; Timesheets
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">
-              Timesheet
-            </h1>
-            <p className="text-sm text-gray-500">
-              {session.user.email} &middot;{" "}
-              {membership.role.replace(/_/g, " ")}
-            </p>
-          </div>
-          <LogoutButton />
-        </div>
+    <>
+      <PageHeader
+        title={weekLabel}
+        description={`${timesheet.project.clientName} — ${timesheet.consultant.name}`}
+        breadcrumbs={[
+          { label: "Dashboard", href: `/tenant/${tenantId}/dashboard` },
+          { label: "Timesheets", href: `/tenant/${tenantId}/timesheets` },
+          { label: weekLabel },
+        ]}
+      />
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <TimesheetDetailClient
-            timesheet={serialized}
-            tenantId={tenantId}
-            userRole={membership.role}
-            isOwner={isOwner}
-          />
-        </div>
-      </div>
-    </main>
+      <TimesheetDetailClient
+        timesheet={serialized}
+        tenantId={tenantId}
+        userRole={membership.role}
+        isOwner={isOwner}
+      />
+    </>
   );
 }

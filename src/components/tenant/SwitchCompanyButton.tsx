@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ArrowRight, Loader2 } from "lucide-react";
 import type { TenantRole } from "@prisma/client";
 
 interface SwitchCompanyButtonProps {
@@ -46,7 +47,12 @@ export default function SwitchCompanyButton({ tenantId }: SwitchCompanyButtonPro
         }
       }}
     >
-      {loading ? "Switching…" : "Switch to this company"}
+      {loading ? (
+        <Loader2 size={14} className="animate-spin mr-1" />
+      ) : (
+        <ArrowRight size={14} className="mr-1" />
+      )}
+      {loading ? "Switching…" : "Enter"}
     </Button>
   );
 }

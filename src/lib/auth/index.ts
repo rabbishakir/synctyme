@@ -29,29 +29,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        mfaToken: { label: "MFA Token", type: "text" },
+        email: {},
+        password: {},
+        mfaToken: {},
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        const email = typeof credentials?.email === "string" ? credentials.email.trim() : "";
+        const password = typeof credentials?.password === "string" ? String(credentials.password) : "";
+        const mfaToken = typeof credentials?.mfaToken === "string" ? String(credentials.mfaToken) : "";
+
+        if (!email || !password) {
           return null;
         }
 
-        const email = String(credentials.email).trim();
-
-        const user = await verifyUserPassword(
-          email,
-          credentials.password as string
-        );
+        const user = await verifyUserPassword(email, password);
         if (!user) return null;
 
         if (user.mfaEnabled) {
-          if (!credentials.mfaToken || !user.mfaSecret) return null;
-          const valid = verifyMFAToken(
-            user.mfaSecret,
-            credentials.mfaToken as string
-          );
+          if (!mfaToken || !user.mfaSecret) return null;
+          const valid = verifyMFAToken(user.mfaSecret, mfaToken);
           if (!valid) return null;
         }
 
